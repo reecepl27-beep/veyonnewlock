@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="/core">
+    <file>lock_background.png</file>
     <file>../../COPYING</file>
     <file>icon64.png</file>
     <file>application-x-pem-key.png</file>
