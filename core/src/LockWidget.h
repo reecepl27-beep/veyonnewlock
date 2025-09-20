@@ -1,53 +1,71 @@
-/*
- *  LockWidget.h - widget for locking a client
- *
- *  Copyright (c) 2006-2025 Tobias Junghans <tobydox@veyon.io>
- *
- *  This file is part of Veyon - https://veyon.io
- *
- *  This is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This software is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this software; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
- *  USA.
- */
-
 #pragma once
 
 #include <QWidget>
 #include <QPixmap>
-
+#include <QPainter>
 #include "VeyonCore.h"
-
 
 class VEYON_CORE_EXPORT LockWidget : public QWidget
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	enum Mode
-	{
-		DesktopVisible,
-		BackgroundPixmap,
-		NoBackground
-	} ;
+    enum Mode
+    {
+        DesktopVisible,   // Show desktop behind lock
+        BackgroundPixmap, // Show a background image
+        NoBackground      // Solid color background
+    };
 
-	explicit LockWidget( Mode mode, const QPixmap& background = QPixmap(), QWidget* parent = nullptr );
-	~LockWidget() override;
+    explicit LockWidget(QWidget* parent = nullptr)
+        : QWidget(parent)
+    {
+        setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+        setAttribute(Qt::WA_DeleteOnClose);
 
+        // Load the image from resources
+        if (m_background.load(":/images/lock_background.png"))
+            m_mode = BackgroundPixmap;
+        else
+            m_mode = NoBackground;
+    }
+
+protected:
+    void paintEvent(QPaintEvent* event) override
+    {
+        Q_UNUSED(event);
+        QPainter painter(this);
+
+        switch (m_mode)
+        {
+            case BackgroundPixmap:
+            {
+                // Scale the image smoothly to fit the widget
+                QPixmap scaled = m_background.scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+                
+                // Center the image
+                int x = (width() - scaled.width()) / 2;
+                int y = (height() - scaled.height()) / 2;
+                painter.drawPixmap(x, y, scaled);
+                break;
+            }
+
+            case DesktopVisible:
+                painter.fillRect(rect(), Qt::transparent);
+                break;
+
+            case NoBackground:
+            default:
+                painter.fillRect(rect(), Qt::black);
+                break;
+        }
+
+        // Optional: overlay lock message
+        painter.setPen(Qt::white);
+        painter.setFont(QFont("Arial", 24, QFont::Bold));
+        painter.drawText(rect(), Qt::AlignCenter, "This computer is locked");
+    }
 
 private:
-	void paintEvent( QPaintEvent * ) override;
-
-	QPixmap m_background;
-	Mode m_mode;
-
-} ;
+    QPixmap m_background;
+    Mode m_mode;
+};
